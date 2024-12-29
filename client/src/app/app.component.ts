@@ -12,14 +12,6 @@ import { CanvasComponent } from "./canvas/canvas.component";
   styleUrl: './app.component.less',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AppComponent implements OnInit, OnDestroy {
-  ngOnDestroy(): void {
-    throw new Error("Method not implemented.");
-  }
-
-  ngOnInit(): void {
-    throw new Error("Method not implemented.");
-  }
-
+export class AppComponent {
   title = 'canvastream';
 }

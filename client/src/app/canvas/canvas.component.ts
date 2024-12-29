@@ -1,7 +1,9 @@
-import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, Output, ViewChild } from '@angular/core';
+import { CanvasRecorder } from "../canvas-recorder/canvas-recorder.component";
 
 @Component({
   selector: 'app-canvas',
+  imports: [CanvasRecorder],
   templateUrl: './canvas.component.html',
   styleUrls: ['./canvas.component.less']
 })
@@ -9,7 +11,7 @@ export class CanvasComponent implements OnInit {
   @ViewChild('canvas', { static: true }) canvas!: ElementRef<HTMLCanvasElement>;
   private _context!: CanvasRenderingContext2D;
 
-  private _drawing!: boolean;
+  isDrawing!: boolean;
   private _prevX!: number;
   private _prevY!: number;
   readonly _subGridSize = 20;
@@ -22,6 +24,11 @@ export class CanvasComponent implements OnInit {
     this.canvas.nativeElement.height = window.innerHeight;
     this._context = this.canvas.nativeElement.getContext('2d')!;
     this.drawGrid(); // Draw gridlines on the canvas
+    this.isDrawing = false;
+  }
+
+  get canvasElement(): ElementRef<HTMLCanvasElement> {
+    return this.canvas;
   }
 
   // Draws the gridlines on the canvas
@@ -55,7 +62,7 @@ export class CanvasComponent implements OnInit {
 
   @HostListener('mousedown', ['$event'])
   onMouseDown(event: MouseEvent): void {
-    this._drawing = true;
+    this.isDrawing = true;
     this._context.strokeStyle = '#000';
     this._context.lineWidth = 2;
 
@@ -66,7 +73,7 @@ export class CanvasComponent implements OnInit {
 
   @HostListener('mousemove', ['$event'])
   onMouseMove(event: MouseEvent): void {
-    if (!this._drawing) return;
+    if (!this.isDrawing) return;
 
     const rect = this.canvas.nativeElement.getBoundingClientRect();
     const currentX = event.clientX - rect.left;
@@ -80,7 +87,7 @@ export class CanvasComponent implements OnInit {
   @HostListener('mouseup')
   @HostListener('mouseleave')
   onMouseUp(): void {
-    this._drawing = false;
+    this.isDrawing = false;
   }
 
   // Draws a line between two points

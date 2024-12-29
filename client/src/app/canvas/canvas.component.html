@@ -1,3 +1,7 @@
 <div class="canvas-container">
   <canvas #canvas></canvas>
+  <app-canvas-recorder 
+    [isDrawing]="isDrawing"
+    [canvas]="canvasElement"
+  ></app-canvas-recorder>
 </div>
