@@ -27,6 +27,7 @@ export class CanvasComponent implements OnInit {
     this.isDrawing = false;
   }
 
+  // Required for correct typing
   get canvasElement(): ElementRef<HTMLCanvasElement> {
     return this.canvas;
   }
