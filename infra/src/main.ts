@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { BackendStack } from './backend-stack';
+import { BackendStack } from './client-stack';
 
 const app = new cdk.App();
 new BackendStack(app, 'BackendStack', {
