@@ -29,13 +29,13 @@ export class ClientStack extends Stack {
     });
 
     // Lookup hosted zone for the custom domain
-    const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
-      domainName: Config.PHZ
-    });
+    // const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+    //   domainName: Config.PHZ
+    // });
 
     // Lookup certificate for cloudfront distro
-    const certificate = certificatemanager.Certificate.fromCertificateArn(this, "Certificate", 
-      Config.ACM_CERT_ARN);
+    // const certificate = certificatemanager.Certificate.fromCertificateArn(this, "Certificate", 
+    //   Config.ACM_CERT_ARN);
 
     // Create CloudFront distribution
     const distribution = new cloudfront.Distribution(this, 'AngularDistribution', {
@@ -46,16 +46,16 @@ export class ClientStack extends Stack {
         ),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
-      domainNames: [Config.DOMAIN],
-      certificate
+      // domainNames: [Config.DOMAIN],
+      // certificate
     });
 
     // Create Route 53 alias record for the CloudFront distribution
-    new route53.ARecord(this, 'AliasRecord', {
-      zone: hostedZone,
-      recordName: Config.DOMAIN,
-      target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
-    });
+    // new route53.ARecord(this, 'AliasRecord', {
+    //   zone: hostedZone,
+    //   recordName: Config.DOMAIN,
+    //   target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
+    // });
 
     // Outputs
     new CfnOutput(this, 'BucketName', {

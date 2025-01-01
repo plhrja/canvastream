@@ -36,15 +36,16 @@ yarn-error.log
 **/libpeerconnection.log
 testem.log
 **/typings
+*.env
 
 # System files
 .DS_Store
 Thumbs.db
 
 # Ported from cdk defaults
-backend/*.js
-backend/!jest.config.js
-backend/*.d.ts
-backend/.cdk.staging
-backend/cdk.out
+infra/*.js
+infra/!jest.config.js
+infra/*.d.ts
+infra/.cdk.staging
+infra/cdk.out
 
