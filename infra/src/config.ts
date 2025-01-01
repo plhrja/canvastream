@@ -6,7 +6,7 @@ export class Config {
   static readonly IS_PRODUCTION: boolean = Config.ENV === 'prod';
   static readonly ACM_CERT_ARN: string = this.strict_parse_string(process.env.ACM_CERT_ARN);
   static readonly PHZ: string = this.strict_parse_string(process.env.PHZ);
-  static readonly DOMAIN: string = this.strict_parse_string(process.env.ACM_CERT_ARN);
+  static readonly DOMAIN: string = this.strict_parse_string(process.env.DOMAIN);
   static readonly CLIENT_BUCKET: string = this.strict_parse_string(process.env.CLIENT_BUCKET);
   static readonly CLIENT_DIST: string = this.strict_parse_string(process.env.CLIENT_DIST);
 
