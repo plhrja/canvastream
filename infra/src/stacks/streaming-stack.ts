@@ -21,7 +21,7 @@ export class StreamingStack extends Stack {
     });
 
     const backupBucket = new s3.Bucket(this, 'FirehoseBackupBucket', {
-      bucketName: Config.REDSHIFT_BUCKET,
+      bucketName: Config.REDSHIFT_BACKUP_BUCKET,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       publicReadAccess: false
@@ -29,7 +29,21 @@ export class StreamingStack extends Stack {
 
     // Create a VPC for Redshift
     const vpc = new ec2.Vpc(this, 'RedshiftVpc', {
-      maxAzs: 3
+      maxAzs: 3,
+      natGateways: 0,
+      subnetConfiguration: [
+        {
+          name: 'PublicSubnet',
+          subnetType: ec2.SubnetType.PUBLIC,
+          cidrMask: 24,
+        },
+        {
+          name: 'PrivateSubnet',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+          cidrMask: 24,
+        },
+      ],
+
     });
 
     // Redshift Serverless Workgroup and Namespace
@@ -67,34 +81,34 @@ export class StreamingStack extends Stack {
     );
 
     // Kinesis Data Firehose Delivery Stream
-    const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToRedshift', {
-      deliveryStreamType: 'DirectPut',
-      deliveryStreamName: Config.FIREHOSE_STREAM_NAME,
-      redshiftDestinationConfiguration: {
-        clusterJdbcurl: `jdbc:redshift-serverless://${workgroup.workgroupName}.${namespace.namespaceName}.redshift-serverless.amazonaws.com:5439/dev`,
-        copyCommand: {
-          dataTableName: Config.REDSHIFT_DB,
-          dataTableColumns: 'id, timestamp, coordinate_x, coordinate_y, is_drawing',
-          // copyOptions: "FORMAT AS JSON 'auto'",
-        },
-        password: Config.REDSHIFT_ADMIN_USERNAME,
-        username: Config.REDSHIFT_ADMIN_PW,
-        roleArn: firehoseRole.roleArn,
-        s3BackupConfiguration: {
-          bucketArn: backupBucket.bucketArn,
-          roleArn: firehoseRole.roleArn
-        },
-        s3Configuration: {
-          bucketArn: bucket.bucketArn,
-          roleArn: firehoseRole.roleArn,
-          bufferingHints: {
-            intervalInSeconds: 60,
-            sizeInMBs: 1,
-          },
-          compressionFormat: "GZIP"
-        }
-      }
-    });
+    // const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToRedshift', {
+    //   deliveryStreamType: 'DirectPut',
+    //   deliveryStreamName: Config.FIREHOSE_STREAM_NAME,
+    //   redshiftDestinationConfiguration: {
+    //     clusterJdbcurl: `jdbc:redshift-serverless://${workgroup.workgroupName}.${namespace.namespaceName}.redshift-serverless.amazonaws.com:5439/dev`,
+    //     copyCommand: {
+    //       dataTableName: Config.REDSHIFT_TABLE,
+    //       dataTableColumns: 'id, timestamp, coordinate_x, coordinate_y, is_drawing',
+    //       // copyOptions: "FORMAT AS JSON 'auto'",
+    //     },
+    //     password: Config.REDSHIFT_ADMIN_USERNAME,
+    //     username: Config.REDSHIFT_ADMIN_PW,
+    //     roleArn: firehoseRole.roleArn,
+    //     s3BackupConfiguration: {
+    //       bucketArn: backupBucket.bucketArn,
+    //       roleArn: firehoseRole.roleArn
+    //     },
+    //     s3Configuration: {
+    //       bucketArn: bucket.bucketArn,
+    //       roleArn: firehoseRole.roleArn,
+    //       bufferingHints: {
+    //         intervalInSeconds: 60,
+    //         sizeInMBs: 1,
+    //       },
+    //       compressionFormat: "GZIP"
+    //     }
+    //   }
+    // });
 
     // Cognito Identity Pool
     const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
@@ -132,10 +146,10 @@ export class StreamingStack extends Stack {
     new CfnOutput(this, 'BucketName', {
       value: bucket.bucketName,
     });
-    new CfnOutput(this, 'RedshiftNamespace', {
+    new CfnOutput(this, 'RedshiftNamespaceName', {
       value: namespace.namespaceName,
     });
-    new CfnOutput(this, 'IdentityPool', {
+    new CfnOutput(this, 'IdentityPoolId', {
       value: identityPool.attrId,
     });
   }

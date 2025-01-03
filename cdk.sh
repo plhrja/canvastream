@@ -8,7 +8,6 @@ Usage: scripts/cdk.sh COMMAND FLAGS [OPTIONS]
 OPTIONS:
   [-b | --build]        Build the client app
   [-e | --environment]  The environment of the stack. Allowed values: prod, test
-  [--bucket]            The bucket (name) in which the client app is deployed
   [--bootstrap]         Bootstrap the CDK environment
   [-h | --help]         Print help
 EOF
@@ -18,7 +17,6 @@ ENV_WHITELIST=("prod" "test")
 BUILD=
 BOOTSTRAP=
 export ENV=${ENV:-"test"}
-export CLIENT_BUCKET=${CLIENT_BUCKET:-"canvastream-client-$ENV"}
 FLAGS=""
 COMMANDS=""
 while (("$#")); do
@@ -37,11 +35,6 @@ while (("$#")); do
       exit 1
     fi
 
-    shift
-    shift
-    ;;
-  --bucket)
-    CLIENT_BUCKET=$2
     shift
     shift
     ;;
@@ -64,7 +57,7 @@ while (("$#")); do
   esac
 done
 
-[[ -f cdk.env ]] && export $(cat cdk.env | xargs)
+[[ -f cdk.env ]] && export $(cat cdk.env | envsubst | xargs)
 
 if [[ $BUILD ]]
 then

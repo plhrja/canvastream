@@ -49,3 +49,5 @@ infra/*.d.ts
 infra/.cdk.staging
 infra/cdk.out
 
+
+infra/cdk.context.json
