@@ -81,34 +81,34 @@ export class StreamingStack extends Stack {
     );
 
     // Kinesis Data Firehose Delivery Stream
-    // const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToRedshift', {
-    //   deliveryStreamType: 'DirectPut',
-    //   deliveryStreamName: Config.FIREHOSE_STREAM_NAME,
-    //   redshiftDestinationConfiguration: {
-    //     clusterJdbcurl: `jdbc:redshift-serverless://${workgroup.workgroupName}.${namespace.namespaceName}.redshift-serverless.amazonaws.com:5439/dev`,
-    //     copyCommand: {
-    //       dataTableName: Config.REDSHIFT_TABLE,
-    //       dataTableColumns: 'id, timestamp, coordinate_x, coordinate_y, is_drawing',
-    //       // copyOptions: "FORMAT AS JSON 'auto'",
-    //     },
-    //     password: Config.REDSHIFT_ADMIN_USERNAME,
-    //     username: Config.REDSHIFT_ADMIN_PW,
-    //     roleArn: firehoseRole.roleArn,
-    //     s3BackupConfiguration: {
-    //       bucketArn: backupBucket.bucketArn,
-    //       roleArn: firehoseRole.roleArn
-    //     },
-    //     s3Configuration: {
-    //       bucketArn: bucket.bucketArn,
-    //       roleArn: firehoseRole.roleArn,
-    //       bufferingHints: {
-    //         intervalInSeconds: 60,
-    //         sizeInMBs: 1,
-    //       },
-    //       compressionFormat: "GZIP"
-    //     }
-    //   }
-    // });
+    const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToRedshift', {
+      deliveryStreamType: 'DirectPut',
+      deliveryStreamName: Config.FIREHOSE_STREAM_NAME,
+      redshiftDestinationConfiguration: {
+        clusterJdbcurl: `jdbc:redshift://${workgroup.workgroupName}.${this.account}.${this.region}.redshift-serverless.amazonaws.com:5439/canvastream`,
+        copyCommand: {
+          dataTableName: Config.REDSHIFT_TABLE,
+          dataTableColumns: 'id, timestamp, coordinate_x, coordinate_y, is_drawing',
+          // copyOptions: "FORMAT AS JSON 'auto'",
+        },
+        password: Config.REDSHIFT_ADMIN_USERNAME,
+        username: Config.REDSHIFT_ADMIN_PW,
+        roleArn: firehoseRole.roleArn,
+        s3BackupConfiguration: {
+          bucketArn: backupBucket.bucketArn,
+          roleArn: firehoseRole.roleArn
+        },
+        s3Configuration: {
+          bucketArn: bucket.bucketArn,
+          roleArn: firehoseRole.roleArn,
+          bufferingHints: {
+            intervalInSeconds: 60,
+            sizeInMBs: 1,
+          },
+          compressionFormat: "GZIP"
+        }
+      }
+    });
 
     // Cognito Identity Pool
     const identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {

@@ -14,6 +14,7 @@ export class Config {
   static readonly REDSHIFT_NS: string = this.strict_parse_string(process.env.REDSHIFT_NS);
   static readonly REDSHIFT_WG: string = this.strict_parse_string(process.env.REDSHIFT_WG);
   static readonly REDSHIFT_DB: string = this.strict_parse_string(process.env.REDSHIFT_DB);
+  static readonly REDSHIFT_TABLE: string = this.strict_parse_string(process.env.REDSHIFT_TABLE);
   static readonly REDSHIFT_CAPACITY: number = parseInt(process.env.REDSHIFT_CAPACITY || "1");
   static readonly REDSHIFT_ADMIN_USERNAME: string = this.strict_parse_string(process.env.REDSHIFT_ADMIN_USERNAME);
   static readonly REDSHIFT_ADMIN_PW: string = this.strict_parse_string(process.env.REDSHIFT_ADMIN_PW);
