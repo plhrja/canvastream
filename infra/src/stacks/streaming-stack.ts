@@ -5,6 +5,7 @@ import * as redshift from 'aws-cdk-lib/aws-redshiftserverless';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Config } from "../config";
 import { CfnOutput, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 
@@ -80,7 +81,18 @@ export class StreamingStack extends Stack {
       })
     );
 
-    // Kinesis Data Firehose Delivery Stream
+    // Kinesis Data Firehose Delivery Stream and logging
+    const logGroup = new logs.LogGroup(this, 'FirehoseLogGroup', {
+      removalPolicy: RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.ONE_WEEK
+    });
+
+    const logStream = new logs.LogStream(this, 'FirehoseLogStream', {
+      logGroup
+    });
+
+    logGroup.grantWrite(firehoseRole);
+
     const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToRedshift', {
       deliveryStreamType: 'DirectPut',
       deliveryStreamName: Config.FIREHOSE_STREAM_NAME,
@@ -106,6 +118,11 @@ export class StreamingStack extends Stack {
             sizeInMBs: 1,
           },
           compressionFormat: "GZIP"
+        },
+        cloudWatchLoggingOptions: {
+          enabled: true,
+          logGroupName: logGroup.logGroupName,
+          logStreamName: logStream.logStreamName
         }
       }
     });
