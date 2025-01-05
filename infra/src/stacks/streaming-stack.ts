@@ -100,8 +100,8 @@ export class StreamingStack extends Stack {
         clusterJdbcurl: `jdbc:redshift://${workgroup.workgroupName}.${this.account}.${this.region}.redshift-serverless.amazonaws.com:5439/canvastream`,
         copyCommand: {
           dataTableName: Config.REDSHIFT_TABLE,
-          dataTableColumns: 'id, timestamp, coordinate_x, coordinate_y, is_drawing',
-          // copyOptions: "FORMAT AS JSON 'auto'",
+          dataTableColumns: '"id", "timestamp", "coordinate_x", "coordinate_y", "is_drawing"',
+          copyOptions: "FORMAT AS JSON 'auto'",
         },
         password: Config.REDSHIFT_ADMIN_USERNAME,
         username: Config.REDSHIFT_ADMIN_PW,
@@ -117,7 +117,7 @@ export class StreamingStack extends Stack {
             intervalInSeconds: 60,
             sizeInMBs: 1,
           },
-          compressionFormat: "GZIP"
+          // compressionFormat: "GZIP"
         },
         cloudWatchLoggingOptions: {
           enabled: true,
