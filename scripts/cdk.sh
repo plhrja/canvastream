@@ -6,7 +6,6 @@ print_help() {
 cat << EOF
 Usage: scripts/cdk.sh COMMAND FLAGS [OPTIONS] 
 OPTIONS:
-  [-b | --build]        Build the client app
   [-e | --environment]  The environment of the stack. Allowed values: prod, test
   [--bootstrap]         Bootstrap the CDK environment
   [-h | --help]         Print help
@@ -14,17 +13,12 @@ EOF
 }
 
 ENV_WHITELIST=("prod" "test")
-BUILD=
 BOOTSTRAP=
 export ENV=${ENV:-"test"}
 FLAGS=""
 COMMANDS=""
 while (("$#")); do
   case "$1" in
-  -b | --build)
-    BUILD=1
-    shift
-    ;;
   -e | --environment)
     ENV=$2
     
@@ -57,16 +51,7 @@ while (("$#")); do
   esac
 done
 
-[[ -f cdk.env ]] && export $(cat cdk.env | envsubst | xargs)
-
-if [[ $BUILD ]]
-then
-  echo "Building client source"
-
-  pushd client
-  ng build
-  popd
-fi
+[[ -f $ENV.env ]] && export $(cat $ENV.env | envsubst | xargs)
 
 if [[ $BOOTSTRAP ]]
 then
