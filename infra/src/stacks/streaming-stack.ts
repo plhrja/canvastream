@@ -162,12 +162,15 @@ export class StreamingStack extends Stack {
     // Outputs
     new CfnOutput(this, 'BucketName', {
       value: bucket.bucketName,
+      exportName: 'FirehoseBucket'
     });
     new CfnOutput(this, 'RedshiftNamespaceName', {
       value: namespace.namespaceName,
+      exportName: 'RedshiftNamespace'
     });
     new CfnOutput(this, 'IdentityPoolId', {
       value: identityPool.attrId,
+      exportName: 'CognitoIdentityPoolId'
     });
   }
 }
