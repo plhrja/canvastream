@@ -1,0 +1,6 @@
+
+export const environment = {
+  AWS_IDENTITY_POOL: '${IDENTITY_POOL}',
+  AWS_REGION: '${REGION}',
+  AWS_FIREHOSE_STREAM: '${FIREHOSE_STREAM_NAME}',
+}

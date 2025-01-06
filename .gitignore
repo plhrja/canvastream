@@ -51,3 +51,5 @@ infra/cdk.out
 
 
 infra/cdk.context.json
+
+client/src/environment.ts

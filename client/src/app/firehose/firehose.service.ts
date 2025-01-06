@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as AWS from 'aws-sdk';
 import { Observable, from } from 'rxjs';
+import { environment } from "../../environment";
 
 @Injectable({
   providedIn: 'root',
@@ -10,9 +11,9 @@ export class FirehoseService {
 
   constructor() {
     AWS.config.update({
-      region: process.env["AWS_REGION"],
+      region: environment.AWS_REGION,
       credentials: new AWS.CognitoIdentityCredentials({
-        IdentityPoolId: process.env["AWS_IDENTITY_POOL"] || '', // This will fail fast with empty pool id
+        IdentityPoolId: environment.AWS_IDENTITY_POOL,
       }),
     });
 
@@ -21,7 +22,7 @@ export class FirehoseService {
 
   sendRecordingToFirehose(data: CanvasRecording): Observable<AWS.Firehose.PutRecordOutput> {
     const params = {
-      DeliveryStreamName: process.env['AWS_FIREHOSE_STREAM'] || '',
+      DeliveryStreamName: environment.AWS_FIREHOSE_STREAM,
       Record: {
         Data: JSON.stringify(data),
       },

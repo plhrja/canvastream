@@ -49,6 +49,8 @@ done
 export IDENTITY_POOL=$(aws --profile personal cloudformation list-exports \
   | jq -r '.Exports[] | select(.Name == "CognitoIdentityPoolId") | .Value')
 
+envsubst < client/src/environment.template.ts > client/src/environment.ts
+
 CMD="ng $COMMANDS $FLAGS"
 
 echo "Executing $CMD"
