@@ -15,6 +15,7 @@ export class CanvasRecorder implements OnInit {
 
   private _isRecording!: boolean;
   private _recordingId!: string | undefined;
+  private _records!: CanvasRecording[];
 
   get isRecording(): boolean { return this._isRecording}
 
@@ -23,13 +24,21 @@ export class CanvasRecorder implements OnInit {
   ngOnInit(): void {
     this._isRecording = false;
     this._recordingId = undefined;
+    this._records = [];
   }
 
   toggleRecording(): void {
     this._isRecording = !this._isRecording
-    this._recordingId = this._isRecording
-      ? uuidv7()
-      : undefined;
+
+    if (this._isRecording) {
+      this._recordingId = uuidv7();
+    } else {
+      if (this._records.length > 0) {
+        this._firehoseService.sendRecordingToFirehose(this._records);
+        this._records = [];
+      }
+      this._recordingId = undefined;
+    }
   }
 
   @HostListener('window:keyup', ['$event'])
@@ -47,7 +56,7 @@ export class CanvasRecorder implements OnInit {
     const currentX = event.clientX - rect.left;
     const currentY = event.clientY - rect.top;
     
-    this._firehoseService.sendRecordingToFirehose(
+    this._records.push(
       new CanvasRecording(
         (this._recordingId as string),
         new Date(),
@@ -56,5 +65,10 @@ export class CanvasRecorder implements OnInit {
         this.isDrawing
       )
     );
+
+    if (this._records.length > 100) {
+      this._firehoseService.sendRecordingToFirehose(this._records);
+      this._records = []
+    }
   }
 }

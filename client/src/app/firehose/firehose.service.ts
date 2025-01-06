@@ -20,11 +20,11 @@ export class FirehoseService {
     this._firehose = new AWS.Firehose();
   }
 
-  sendRecordingToFirehose(data: CanvasRecording): Observable<AWS.Firehose.PutRecordOutput> {
+  sendRecordingToFirehose(data: CanvasRecording[]): Observable<AWS.Firehose.PutRecordOutput> {
     const params = {
       DeliveryStreamName: environment.AWS_FIREHOSE_STREAM,
       Record: {
-        Data: JSON.stringify(data),
+        Data: JSON.stringify(data.map(r => r.toJSON())),
       },
     };
     return from(this._firehose.putRecord(params).promise());
@@ -57,4 +57,14 @@ export class CanvasRecording {
   get coordinateX(): number { return this._coordinateX; }
   get coordinateY(): number{ return this._coordinateY; }
   get isDrawing(): boolean{ return this._isDrawing; }
+
+  toJSON(): any {
+    return {
+      id: this.id,
+      timestamp: this.timestamp,
+      coordinateX: this.coordinateX,
+      coordinateY: this.coordinateY,
+      isDrawing: this.isDrawing,
+    }
+  }
 }
