@@ -103,8 +103,8 @@ export class StreamingStack extends Stack {
           dataTableColumns: '"id", "timestamp", "coordinate_x", "coordinate_y", "is_drawing"',
           copyOptions: "FORMAT AS JSON 'auto'",
         },
-        password: Config.REDSHIFT_ADMIN_USERNAME,
-        username: Config.REDSHIFT_ADMIN_PW,
+        password: Config.REDSHIFT_ADMIN_PW,
+        username: Config.REDSHIFT_ADMIN_USERNAME,
         roleArn: firehoseRole.roleArn,
         s3BackupConfiguration: {
           bucketArn: backupBucket.bucketArn,
