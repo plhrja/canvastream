@@ -24,7 +24,7 @@ export class FirehoseService {
     const params = {
       DeliveryStreamName: environment.AWS_FIREHOSE_STREAM,
       Record: {
-        Data: JSON.stringify(data.map(r => r.toJSON())),
+        Data: data.map(r => JSON.stringify(r.toJSON())),
       },
     };
     return from(this._firehose.putRecord(params).promise());
