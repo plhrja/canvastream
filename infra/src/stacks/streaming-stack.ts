@@ -55,12 +55,23 @@ export class StreamingStack extends Stack {
       dbName: Config.REDSHIFT_DB
     });
 
+    const redshiftSecurityGroup = new ec2.SecurityGroup(this, 'RedshiftSecurityGroup', {
+      vpc: vpc,
+      allowAllOutbound: true
+    });
+    redshiftSecurityGroup.addIngressRule(
+      ec2.Peer.ipv4("52.19.239.192/27"), // See https://docs.aws.amazon.com/firehose/latest/dev/controlling-access.html#using-iam-rs-vpc
+      ec2.Port.tcp(5439),
+      'Allow Firehose access'
+    );
+
     const workgroup = new redshift.CfnWorkgroup(this, 'RedshiftWorkgroup', {
       workgroupName: Config.REDSHIFT_WG,
       namespaceName: namespace.namespaceName,
       publiclyAccessible: true,
       baseCapacity: Config.REDSHIFT_CAPACITY,
-      subnetIds: vpc.privateSubnets.map(s => s.subnetId)
+      subnetIds: vpc.privateSubnets.map(s => s.subnetId),
+      securityGroupIds: [redshiftSecurityGroup.securityGroupId]
     });
 
     // IAM Role for Firehose
