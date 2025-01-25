@@ -70,7 +70,7 @@ export class StreamingStack extends Stack {
       namespaceName: namespace.namespaceName,
       publiclyAccessible: true,
       baseCapacity: Config.REDSHIFT_CAPACITY,
-      subnetIds: vpc.privateSubnets.map(s => s.subnetId),
+      subnetIds: vpc.publicSubnets.map(s => s.subnetId),
       securityGroupIds: [redshiftSecurityGroup.securityGroupId]
     });
 
@@ -87,6 +87,8 @@ export class StreamingStack extends Stack {
         actions: [
           'redshift-data:ExecuteStatement',
           'redshift-data:BatchExecuteStatement',
+          'redshift-data:DescribeStatement',
+          'redshift-data:CancelStatement'
         ],
         resources: ['*'], // Replace with specific resource ARN for tighter security
       })
