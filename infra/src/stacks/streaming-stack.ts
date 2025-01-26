@@ -1,13 +1,16 @@
 import { Construct } from 'constructs';
-import * as firehose from 'aws-cdk-lib/aws-kinesisfirehose';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as redshift from 'aws-cdk-lib/aws-redshiftserverless';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as cognito from 'aws-cdk-lib/aws-cognito';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as logs from 'aws-cdk-lib/aws-logs';
 import { Config } from "../config";
-import { CfnOutput, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import {
+  aws_s3 as s3, 
+  aws_kinesisfirehose as firehose,
+  aws_dynamodb as dynamodb,
+  aws_lambda as lambda,
+  aws_logs as logs,
+  aws_iam as iam,
+  aws_cognito as cognito,
+  CfnOutput, RemovalPolicy, Stack, StackProps 
+} from "aws-cdk-lib";
+import { PythonFunction } from "@aws-cdk/aws-lambda-python-alpha";
 
 export class StreamingStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -15,64 +18,41 @@ export class StreamingStack extends Stack {
 
     // S3 Bucket for Firehose intermediate storage
     const bucket = new s3.Bucket(this, 'FirehoseBucket', {
-      bucketName: Config.REDSHIFT_BUCKET,
+      bucketName: Config.FIREHOSE_BUCKET,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      publicReadAccess: false
+      publicReadAccess: false,
+      eventBridgeEnabled: true
     });
 
     const backupBucket = new s3.Bucket(this, 'FirehoseBackupBucket', {
-      bucketName: Config.REDSHIFT_BACKUP_BUCKET,
+      bucketName: Config.FIREHOSE_BACKUP_BUCKET,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       publicReadAccess: false
     });
 
-    // Create a VPC for Redshift
-    const vpc = new ec2.Vpc(this, 'RedshiftVpc', {
-      maxAzs: 3,
-      natGateways: 0,
-      subnetConfiguration: [
-        {
-          name: 'PublicSubnet',
-          subnetType: ec2.SubnetType.PUBLIC,
-          cidrMask: 24,
-        },
-        {
-          name: 'PrivateSubnet',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-          cidrMask: 24,
-        },
-      ],
-
+    // DynamoDB Table
+    const dynamoTable = new dynamodb.Table(this, 'FirehoseDynamoTable', {
+      tableName: Config.DYNAMODB_TABLE,
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
+      removalPolicy: RemovalPolicy.DESTROY,
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST
     });
 
-    // Redshift Serverless Workgroup and Namespace
-    const namespace = new redshift.CfnNamespace(this, 'RedshiftNamespace', {
-      namespaceName: Config.REDSHIFT_NS,
-      adminUsername: Config.REDSHIFT_ADMIN_USERNAME,
-      adminUserPassword: Config.REDSHIFT_ADMIN_PW,
-      dbName: Config.REDSHIFT_DB
+    // Lambda Function for Firehose processing
+    const firehoseProcessor = new PythonFunction(this, 'FirehoseProcessor', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      entry: Config.FIREHOSE_HANDLER_DIST,
+      index: "firehose_handler.py",
+      handler: "handler",
+      environment: {
+        TABLE_NAME: Config.DYNAMODB_TABLE,
+      }
     });
 
-    const redshiftSecurityGroup = new ec2.SecurityGroup(this, 'RedshiftSecurityGroup', {
-      vpc: vpc,
-      allowAllOutbound: true
-    });
-    redshiftSecurityGroup.addIngressRule(
-      ec2.Peer.ipv4("52.19.239.192/27"), // See https://docs.aws.amazon.com/firehose/latest/dev/controlling-access.html#using-iam-rs-vpc
-      ec2.Port.tcp(5439),
-      'Allow Firehose access'
-    );
-
-    const workgroup = new redshift.CfnWorkgroup(this, 'RedshiftWorkgroup', {
-      workgroupName: Config.REDSHIFT_WG,
-      namespaceName: namespace.namespaceName,
-      publiclyAccessible: true,
-      baseCapacity: Config.REDSHIFT_CAPACITY,
-      subnetIds: vpc.publicSubnets.map(s => s.subnetId),
-      securityGroupIds: [redshiftSecurityGroup.securityGroupId]
-    });
+    dynamoTable.grantReadWriteData(firehoseProcessor);
 
     // IAM Role for Firehose
     const firehoseRole = new iam.Role(this, 'FirehoseRole', {
@@ -81,20 +61,9 @@ export class StreamingStack extends Stack {
 
     bucket.grantReadWrite(firehoseRole);
     backupBucket.grantReadWrite(firehoseRole);
+    firehoseProcessor.grantInvoke(firehoseRole);
 
-    firehoseRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: [
-          'redshift-data:ExecuteStatement',
-          'redshift-data:BatchExecuteStatement',
-          'redshift-data:DescribeStatement',
-          'redshift-data:CancelStatement'
-        ],
-        resources: ['*'], // Replace with specific resource ARN for tighter security
-      })
-    );
-
-    // Kinesis Data Firehose Delivery Stream and logging
+    // CloudWatch Logs for Firehose
     const logGroup = new logs.LogGroup(this, 'FirehoseLogGroup', {
       removalPolicy: RemovalPolicy.DESTROY,
       retention: logs.RetentionDays.ONE_WEEK
@@ -106,38 +75,42 @@ export class StreamingStack extends Stack {
 
     logGroup.grantWrite(firehoseRole);
 
-    const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToRedshift', {
+    // Kinesis Firehose Delivery Stream
+    const stream = new firehose.CfnDeliveryStream(this, 'FirehoseToDynamoDB', {
       deliveryStreamType: 'DirectPut',
       deliveryStreamName: Config.FIREHOSE_STREAM_NAME,
-      redshiftDestinationConfiguration: {
-        clusterJdbcurl: `jdbc:redshift://${workgroup.workgroupName}.${this.account}.${this.region}.redshift-serverless.amazonaws.com:5439/canvastream`,
-        copyCommand: {
-          dataTableName: Config.REDSHIFT_TABLE,
-          dataTableColumns: '"id", "timestamp", "coordinate_x", "coordinate_y", "is_drawing"',
-          copyOptions: "FORMAT AS JSON 'auto'",
-        },
-        password: Config.REDSHIFT_ADMIN_PW,
-        username: Config.REDSHIFT_ADMIN_USERNAME,
+      extendedS3DestinationConfiguration: {
+        bucketArn: bucket.bucketArn,
         roleArn: firehoseRole.roleArn,
-        s3BackupConfiguration: {
-          bucketArn: backupBucket.bucketArn,
-          roleArn: firehoseRole.roleArn
+        bufferingHints: {
+          intervalInSeconds: 60,
+          sizeInMBs: 1,
         },
-        s3Configuration: {
-          bucketArn: bucket.bucketArn,
-          roleArn: firehoseRole.roleArn,
-          bufferingHints: {
-            intervalInSeconds: 60,
-            sizeInMBs: 1,
-          },
-          // compressionFormat: "GZIP"
-        },
+        compressionFormat: 'GZIP',
         cloudWatchLoggingOptions: {
           enabled: true,
           logGroupName: logGroup.logGroupName,
-          logStreamName: logStream.logStreamName
-        }
-      }
+          logStreamName: logStream.logStreamName,
+        },
+        processingConfiguration: {
+          enabled: true,
+          processors: [
+            {
+              type: 'Lambda',
+              parameters: [
+                {
+                  parameterName: 'LambdaArn',
+                  parameterValue: firehoseProcessor.functionArn,
+                },
+              ],
+            },
+          ],
+        },
+        s3BackupConfiguration: {
+          bucketArn: backupBucket.bucketArn,
+          roleArn: firehoseRole.roleArn,
+        },
+      },
     });
 
     // Cognito Identity Pool
@@ -175,11 +148,11 @@ export class StreamingStack extends Stack {
     // Outputs
     new CfnOutput(this, 'BucketName', {
       value: bucket.bucketName,
-      exportName: 'FirehoseBucket'
+      exportName: 'FirehoseBucket',
     });
-    new CfnOutput(this, 'RedshiftNamespaceName', {
-      value: namespace.namespaceName,
-      exportName: 'RedshiftNamespace'
+    new CfnOutput(this, 'DynamoDBTableName', {
+      value: dynamoTable.tableName,
+      exportName: 'DynamoDBTable',
     });
     new CfnOutput(this, 'IdentityPoolId', {
       value: identityPool.attrId,
