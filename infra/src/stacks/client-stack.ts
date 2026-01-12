@@ -6,6 +6,7 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { Config } from '../config';
 
@@ -17,8 +18,7 @@ export class ClientStack extends Stack {
     const bucket = new s3.Bucket(this, 'AngularAppBucket', {
       publicReadAccess: false,
       removalPolicy: RemovalPolicy.DESTROY, // Use DESTROY only for dev/testing
-      autoDeleteObjects: true,
-      versioned: true,
+      versioned: false,
       bucketName: Config.CLIENT_BUCKET
     });
 
@@ -36,19 +36,45 @@ export class ClientStack extends Stack {
     // Lookup certificate for cloudfront distro
     const certificate = certificatemanager.Certificate.fromCertificateArn(this, "Certificate", 
       Config.ACM_CERT_ARN);
-    
+      
     // Create CloudFront distribution
     const distribution = new cloudfront.Distribution(this, 'AngularDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(
           bucket,
-          {originAccessLevels: [cloudfront.AccessLevel.READ]}
+          {
+            originAccessLevels: [
+              cloudfront.AccessLevel.READ,
+              cloudfront.AccessLevel.READ_VERSIONED
+            ]
+          }
         ),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: "/index.html"
+        }
+      ],
+      defaultRootObject: "index.html",
       domainNames: [Config.DOMAIN],
       certificate
     });
+
+    bucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject"],
+        resources: [`${bucket.bucketArn}/*`],
+        principals: [new iam.ServicePrincipal("cloudfront.amazonaws.com")],
+        conditions: {
+          StringEquals: {
+            "AWS:SourceArn": distribution.distributionArn
+          }
+        }
+      })
+    );
 
     // Create Route 53 alias record for the CloudFront distribution
     new route53.ARecord(this, 'AliasRecord', {
